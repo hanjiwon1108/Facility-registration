@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from typing import List
+from fastapi.responses import RedirectResponse
 from .. import models, schemas
 from ..database import get_db
 from fastapi.templating import Jinja2Templates
@@ -35,19 +36,20 @@ def get_facilities(
         {"request": request, "facilities": facilities}
     )
 
-@router.post("/", response_model=schemas.Facility)
+@router.get("/new")
+def create_facility_form(request: Request):
+    return templates.TemplateResponse(
+        "facilities/create.html", 
+        {"request": request}
+    )
+
+@router.post("/")
 def create_facility(facility: schemas.FacilityCreate, db: Session = Depends(get_db)):
-    """
-    새로운 시설을 생성하는 엔드포인트
-    요청 데이터를 검증하고 데이터베이스에 저장합니다
-    """
-    # 요청 데이터로 새로운 시설 객체 생성
     db_facility = models.Facility(**facility.dict())
-    # 데이터베이스에 저장
     db.add(db_facility)
     db.commit()
     db.refresh(db_facility)
-    return db_facility
+    return RedirectResponse(url="/facilities", status_code=303)
 
 @router.get("/{facility_id}", response_model=schemas.Facility)
 def get_facility(facility_id: int, db: Session = Depends(get_db)):
@@ -99,4 +101,4 @@ def delete_facility(facility_id: int, db: Session = Depends(get_db)):
     # 시설 삭제
     db.delete(facility)
     db.commit()
-    return {"message": "Facility deleted successfully"} 
+    return {"message": "Facility deleted successfully"}
